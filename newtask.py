@@ -2,9 +2,13 @@
 
 from subprocess import run
 import requests
+import os
+
 
 s="http://127.0.0.1:45222"
 
-out = run(['dmenu', '-p', 'New task name', '-lines', '0'], capture_output=True)
+out = run(['dmenu', '-p', 'New log entry', '-lines', '0'], capture_output=True)
 
-requests.post(f'{s}/newtask', data={'taskname':f'{out.stdout.decode().strip()}'})
+requests.post(f'{s}/switchtask', data={'log-entry':f'{out.stdout.decode().strip()}'})
+os.remove('/tmp/timepassed')
+
