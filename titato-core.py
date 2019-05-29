@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+# /usr/bin/env python3
 
 from tinydb import TinyDB, Query, where
 from flask import Flask, request, jsonify
@@ -8,85 +8,49 @@ from datetime import datetime, timedelta
 core = Flask(__name__)
 
 
-db = TinyDB('tasks.json')
+db = TinyDB("tasks.json")
 
-
-class Task:
-    def __init__(self, task_id, starttime):
-        self.starttime=starttime
-        self.task_id=task_id
-
-with open('tlist') as f:
-    tasks=f.readlines()
-    tasks=[x.strip() for x in tasks if x.strip() != ""]
-
-
-
-
-
-
-@core.route('/newtask', methods=['POST'])
-def newtask():
-    # POST body should contain the new task name
-    tn = request.form['taskname']
-    print(tn)
-    tn=tn.strip()
-    if tn not in tasks and tn != "":
-        tasks.append(tn)
-        with open('tlist', 'a') as f:
-           f.write(f'\n{tn}')
-    #permanentize tasks?
-    return 'OK'
-
-
-@core.route('/switchtask', methods=['POST'])
+@core.route("/switchtask", methods=["POST"])
 def switchtask():
-    #POST body should contain the task id
-    ds = strftime('%G%m%d')
-    old_tasks = db.search(where('date') == ds)
+    #POST body should contain the task text
+    ds = strftime("%G%m%d")
+    old_tasks = db.search(where("date") == ds)
     lot = len(old_tasks)
 
-    new_data = (request.form['id'], strftime('%H%M%S'))
+    new_data = (request.form["log-entry"], strftime("%H%M%S"))
     if lot is 0:
         new_tasks = [new_data]
-        db.insert({'date': ds, 'tasks':new_tasks})
+        db.insert({"date": ds, "tasks": new_tasks})
     else:
-        ot = old_tasks[0]['tasks']
+        ot = old_tasks[0]["tasks"]
         if ot is not None:
             ot.append(new_data)
         else:
             ot = [new_data]
-        db.update({'tasks': ot}, where('date')== ds)
-    
-    #print(db.all())
-    return 'OK'
-   
+        db.update({"tasks": ot}, where("date") == ds)
 
-@core.route('/taskslist')
-def taskslist():
-    return jsonify(tasks)
+    return "OK"
 
 
-@core.route('/get/<days>', methods=['GET']) #this returns a JSON with the tasks between today and the last <<days>>
+@core.route("/get/<days>", methods=["GET"])  # this returns a formatted plaintext with the tasks of the past few <<days>>
 def getlist(days):
-    result=[]
+    result = [] # result is a list of days with their tasks
     for i in range(int(days)):
-        ds = (datetime.now()-timedelta(days=i)).strftime('%G%m%d')
-        query_result = db.search(where('date') == ds)
+        target_date = (datetime.now() - timedelta(days=i)).strftime("%G%m%d") #this is the date we will query the database for
+        query_result = db.search(where("date") == target_date)
         if len(query_result) != 0:
             entry = query_result[0]
-            
+
             result.append(entry)
-    response=""
+    response = ""
 
-    for d in result[::-1]:
-        ds=d['date']
-        response+=f"{ds[:4]}-{ds[4:6]}-{ds[6:]}{'.'*20}\n"
-        
-        tl = d['tasks']
-        for t in tl:
-            ts=t[1]
-            response+=f"\t{ts[:2]}:{ts[2:4]}:{ts[4:]}   |  {tasks[int(t[0])]}\n"
+    for day in result[::-1]:
+        date_stamp = day["date"]
+        response += f"{date_stamp[:4]}-{date_stamp[4:6]}-{date_stamp[6:]}{'.'*20}\n"
 
-    
+        days_tasks = day["tasks"] #a list of this day's tasks, with their timestamps
+        for task in days_tasks:
+            time_stamp = task[1]
+            response += f"\t{time_stamp[:2]}:{time_stamp[2:4]}:{time_stamp[4:]}   |  {task[0]}\n"
+
     return response
